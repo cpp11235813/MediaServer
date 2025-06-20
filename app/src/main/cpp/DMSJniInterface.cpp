@@ -1,36 +1,100 @@
-#include <jni.h>
+//
+// Created by AI Assistant
+//
+
+#include "DMSJniInterface.h"
+#include "DMSCenter.h"
 #include "DMRCenter.h"
-#include "SubMediaRender.cpp"
+//#include <Neptune.h>
+#include "NdkLogger.h"
+#include <jni.h>
 
-extern "C" JNIEXPORT jint JNICALL
-Java_com_github_mediaserver_server_jni_DMSJniInterface_startServer(JNIEnv* env, jclass clazz, jbyteArray rootDir, jbyteArray name, jbyteArray uid) {
-    const char* cRoot = (const char*) env->GetByteArrayElements(rootDir, 0);
-    const char* cName = (const char*) env->GetByteArrayElements(name, 0);
-    const char* cUid = (const char*) env->GetByteArrayElements(uid, 0);
+NPT_SET_LOCAL_LOGGER("DMSJniInterface");
 
-    auto center = DMRCenter::getInstance();
-    center->Init(cName, cUid);
-    center->SetActionReceiver(new SubMediaRender());
-    center->Start(cRoot);
-
-    env->ReleaseByteArrayElements(rootDir, (jbyte*)cRoot, 0);
-    env->ReleaseByteArrayElements(name, (jbyte*)cName, 0);
-    env->ReleaseByteArrayElements(uid, (jbyte*)cUid, 0);
-    return 0;
-}
-
-extern "C" JNIEXPORT jint JNICALL
-Java_com_github_mediaserver_server_jni_DMSJniInterface_stopServer(JNIEnv* env, jclass clazz) {
-    DMRCenter::getInstance()->Stop();
-    return 0;
-}
-
-extern "C" JNIEXPORT jboolean JNICALL
-Java_com_github_mediaserver_server_jni_DMSJniInterface_enableLogPrint(JNIEnv* env, jclass clazz, jboolean flag) {
-    if (flag) {
-        NPT_LogManager::GetDefault().Configure("plist:.level=DEBUG;console:enable=true");
+JNIEXPORT void JNICALL
+JNI_FUNC_DMS(enableLogPrint)(JNIEnv *env, jclass type, jboolean enable) {
+    LOGD("DMSJniInterface::enableLogPrint() - Enable: %d", enable);
+    
+    if (enable) {
+        // Enable detailed logging for Media Server
+        NPT_LogManager::GetDefault().Configure(
+            "plist:.level=FINE;.handlers=ConsoleHandler;.ConsoleHandler.outputs=2;"
+            ".ConsoleHandler.colors=false;.ConsoleHandler.filter=59");
     } else {
-        NPT_LogManager::GetDefault().Configure("plist:.level=ERROR;console:enable=false");
+        // Disable or reduce logging
+        NPT_LogManager::GetDefault().Configure(
+            "plist:.level=WARNING;.handlers=ConsoleHandler;.ConsoleHandler.outputs=2;"
+            ".ConsoleHandler.colors=false;.ConsoleHandler.filter=59");
     }
-    return true;
 }
+
+JNIEXPORT jint JNICALL
+JNI_FUNC_DMS(startServer)(JNIEnv *env, jclass type, jstring friendly_name_,
+                         jstring uuid_, jstring path_) {
+    LOGD("DMSJniInterface::startServer()");
+    
+    // Handle null parameters safely
+    const char *friendly_name = NULL;
+    const char *uuid = NULL;
+    const char *path = NULL;
+    
+    if (friendly_name_ != NULL) {
+        friendly_name = env->GetStringUTFChars(friendly_name_, 0);
+    }
+    if (uuid_ != NULL) {
+        uuid = env->GetStringUTFChars(uuid_, 0);
+    }
+    if (path_ != NULL) {
+        path = env->GetStringUTFChars(path_, 0);
+    }
+    
+    NPT_Result result = NPT_ERROR_INVALID_STATE;
+    
+    DMSCenter* dmsCenter = DMSCenter::getInstance();
+    if (dmsCenter != NULL) {
+        result = dmsCenter->Start(friendly_name, uuid, path);
+    } else {
+        LOGE("DMSCenter instance is null");
+    }
+    
+    // Release string resources safely
+    if (friendly_name_ != NULL && friendly_name != NULL) {
+        env->ReleaseStringUTFChars(friendly_name_, friendly_name);
+    }
+    if (uuid_ != NULL && uuid != NULL) {
+        env->ReleaseStringUTFChars(uuid_, uuid);
+    }
+    if (path_ != NULL && path != NULL) {
+        env->ReleaseStringUTFChars(path_, path);
+    }
+    
+    return result;
+}
+
+JNIEXPORT jint JNICALL
+JNI_FUNC_DMS(stopServer)(JNIEnv *env, jclass type) {
+    LOGD("DMSJniInterface::stopServer()");
+    
+    NPT_Result result = NPT_ERROR_INVALID_STATE;
+    
+    DMSCenter* dmsCenter = DMSCenter::getInstance();
+    if (dmsCenter != NULL) {
+        result = dmsCenter->Stop();
+    } else {
+        LOGE("DMSCenter instance is null");
+    }
+    
+    return result;
+}
+
+JNIEXPORT void JNICALL
+JNI_FUNC_DMR_TYPE(setDMRType)(JNIEnv *env, jclass type, jint dmr_type) {
+    LOGD("DMRJniProxy::setDMRType() - Type: %d", dmr_type);
+    
+    DMRCenter* dmrCenter = DMRCenter::getInstance();
+    if (dmrCenter != NULL) {
+        dmrCenter->SetDMRType(dmr_type);
+    } else {
+        LOGE("DMRCenter instance is null");
+    }
+} 

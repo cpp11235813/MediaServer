@@ -5,7 +5,7 @@
 
 cmake_minimum_required(VERSION 3.4.1)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNPT_CONFIG_HAVE_SYSTEM_LOG_CONFIG")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNPT_CONFIG_HAVE_SYSTEM_LOG_CONFIG -DNPT_CONFIG_ENABLE_LOGGING")
 
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
